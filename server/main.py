@@ -234,8 +234,12 @@ async def _resolve_brand(brand: str) -> Optional[str]:
 
 @app.get("/brands")
 async def list_brands() -> JSONResponse:
+    hidden = set(await asyncio.to_thread(history.get_hidden_builtins))
     customs = await asyncio.to_thread(brand_settings.list_custom)
-    brands = list(BUILTIN_BRANDS) + [
+    brands = [
+        {"key": b["key"], "label": b["label"], "builtin": True, "hidden": b["key"] in hidden}
+        for b in BUILTIN_BRANDS
+    ] + [
         {"key": c["brand"], "label": c["display_name"], "custom": True} for c in customs
     ]
     return JSONResponse({"brands": brands})
@@ -297,6 +301,30 @@ async def rename_brand(brand: str, req: CreateBrandRequest) -> JSONResponse:
     if not ok:
         raise HTTPException(400, "名前を変更できるのは新規作成したアカウントだけです")
     return JSONResponse({"key": brand, "label": name})
+
+
+class HiddenRequest(BaseModel):
+    hidden: bool
+
+
+@app.post("/brands/{brand}/hidden")
+async def set_brand_hidden(brand: str, req: HiddenRequest) -> JSONResponse:
+    """組み込みアカウント（taro/sheep/umai）を一覧・プルダウンから非表示/再表示する。
+    コードは触らず、このインストール固有の表示状態だけをDBに保存する。"""
+    if brand not in ("taro", "sheep", "umai"):
+        raise HTTPException(400, "非表示にできるのは組み込みアカウントだけです")
+    # 全部を非表示にして選べるアカウントが0になるのを防ぐ
+    if req.hidden:
+        hidden = set(await asyncio.to_thread(history.get_hidden_builtins))
+        hidden.add(brand)
+        visible_builtins = [b for b in ("taro", "sheep", "umai") if b not in hidden]
+        customs = await asyncio.to_thread(brand_settings.list_custom)
+        if not visible_builtins and not customs:
+            raise HTTPException(400, "全部を非表示にはできません。先に自分のアカウントを1つ作ってください。")
+    ok = await asyncio.to_thread(history.set_builtin_hidden, brand, req.hidden)
+    if not ok:
+        raise HTTPException(500, "保存に失敗しました。DATABASE_URL を確認してください。")
+    return JSONResponse({"key": brand, "hidden": req.hidden})
 
 
 @app.delete("/brands/{brand}")

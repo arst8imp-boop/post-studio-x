@@ -82,6 +82,22 @@ def set_api_charges_allowed(allowed: bool) -> bool:
     return set_setting("allow_api_charges", "1" if allowed else "0")
 
 
+def get_hidden_builtins() -> list[str]:
+    """UIから非表示にした組み込みブランドのキー一覧（このインストール固有）。"""
+    raw = get_setting("hidden_builtins", "") or ""
+    return [k for k in raw.split(",") if k]
+
+
+def set_builtin_hidden(key: str, hidden: bool) -> bool:
+    """組み込みブランドの表示/非表示を切り替え（コードは触らず表示状態だけ保存）。"""
+    cur = set(get_hidden_builtins())
+    if hidden:
+        cur.add(key)
+    else:
+        cur.discard(key)
+    return set_setting("hidden_builtins", ",".join(sorted(cur)))
+
+
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS post_studio_history (
   id SERIAL PRIMARY KEY,

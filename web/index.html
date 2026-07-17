@@ -131,7 +131,7 @@
     <div style="padding:16px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; font-size:13.5px">
       <div style="color:var(--muted,#888)">
         Xアカウント（ブランド）を新しく作れます。作成したアカウントはペインのプルダウンから選んで生成に使えます。
-        組み込みの3アカウント（タロ / しーぷ / 馬井）は名前変更できません。
+        組み込みの3アカウント（タロ / しーぷ / 馬井）は削除・名前変更はできませんが、「非表示」で一覧から隠せます（いつでも再表示できます）。
       </div>
       <label style="display:flex; flex-direction:column; gap:6px">
         <b>新規アカウントを作成</b>
@@ -140,10 +140,7 @@
           <button type="button" id="account-create" class="primary">作成</button>
         </div>
       </label>
-      <div>
-        <b>作成済みアカウント</b>
-        <div id="account-list" style="margin-top:8px; display:flex; flex-direction:column; gap:6px"></div>
-      </div>
+      <div id="account-list" style="display:flex; flex-direction:column; gap:16px"></div>
       <span id="account-status" style="color:var(--muted,#888)"></span>
     </div>
   </div>

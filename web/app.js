@@ -722,8 +722,9 @@ function brandLabel(key) {
 function fillBrandSelect(sel, { includeAll = false } = {}) {
   if (!sel) return;
   const cur = sel.value;
+  const list = BRANDS.filter((b) => !b.hidden);  // 非表示にした組み込みは出さない
   sel.innerHTML = (includeAll ? '<option value="">すべてのブランド</option>' : '')
-    + BRANDS.map((b) => `<option value="${b.key}">${esc(b.label)}</option>`).join('');
+    + list.map((b) => `<option value="${b.key}">${esc(b.label)}</option>`).join('');
   if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
 }
 
@@ -750,25 +751,43 @@ function esc(s) {
 const accountsModal = document.getElementById('accounts-modal');
 const accountStatus = document.getElementById('account-status');
 
-function openAccountsModal() {
+async function openAccountsModal() {
   accountsModal.hidden = false;
+  await refreshBrands();   // builtin/hidden フラグを最新化してから描画
   renderAccountList();
 }
 
 function renderAccountList() {
   const box = document.getElementById('account-list');
   if (!box) return;
+  const builtins = BRANDS.filter((b) => b.builtin);
   const customs = BRANDS.filter((b) => b.custom);
-  if (!customs.length) {
-    box.innerHTML = '<div style="color:var(--muted,#888)">まだ作成したアカウントはありません。</div>';
-    return;
-  }
-  box.innerHTML = customs.map((b) => `
+
+  const builtinRows = builtins.map((b) => `
     <div style="display:flex; align-items:center; gap:8px">
-      <span style="flex:1; font-weight:600">${esc(b.label)}</span>
-      <button type="button" data-rename="${esc(b.key)}">名前変更</button>
-      <button type="button" class="danger-btn" data-delete="${esc(b.key)}">削除</button>
+      <span style="flex:1; font-weight:600; ${b.hidden ? 'opacity:.5' : ''}">${esc(b.label)}${b.hidden ? '（非表示中）' : ''}</span>
+      <button type="button" data-hide="${esc(b.key)}" data-to="${b.hidden ? '0' : '1'}">${b.hidden ? '再表示' : '非表示'}</button>
     </div>`).join('');
+
+  const customRows = customs.length
+    ? customs.map((b) => `
+      <div style="display:flex; align-items:center; gap:8px">
+        <span style="flex:1; font-weight:600">${esc(b.label)}</span>
+        <button type="button" data-rename="${esc(b.key)}">名前変更</button>
+        <button type="button" class="danger-btn" data-delete="${esc(b.key)}">削除</button>
+      </div>`).join('')
+    : '<div style="color:var(--muted,#888)">まだ作成したアカウントはありません。</div>';
+
+  box.innerHTML = `
+    <div>
+      <b>組み込みアカウント</b>
+      <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px">${builtinRows}</div>
+      <div class="muted" style="font-size:12px; margin-top:6px">※ 削除はできませんが「非表示」で一覧から隠せます（いつでも再表示できます）。</div>
+    </div>
+    <div>
+      <b>作成済みアカウント</b>
+      <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px">${customRows}</div>
+    </div>`;
 }
 
 async function createAccount() {
@@ -842,6 +861,28 @@ async function deleteAccount(key) {
   }
 }
 
+async function setBuiltinHidden(key, hidden) {
+  accountStatus.textContent = hidden ? '非表示にしています…' : '再表示にしています…';
+  try {
+    const res = await fetch(`/brands/${key}/hidden`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hidden }),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(t.slice(0, 140) || `HTTP ${res.status}`);
+    }
+    const label = brandLabel(key);
+    await refreshBrands();
+    renderAccountList();
+    accountStatus.textContent = hidden ? `「${label}」を非表示にしました` : `「${label}」を再表示しました`;
+    setTimeout(() => { accountStatus.textContent = ''; }, 5000);
+  } catch (e) {
+    accountStatus.textContent = `切り替えエラー: ${e.message}`;
+  }
+}
+
 document.getElementById('open-accounts').addEventListener('click', openAccountsModal);
 document.getElementById('account-create').addEventListener('click', createAccount);
 document.getElementById('account-new-name').addEventListener('keydown', (e) => {
@@ -851,7 +892,9 @@ document.getElementById('account-list').addEventListener('click', (e) => {
   const renameBtn = e.target.closest('[data-rename]');
   if (renameBtn) { renameAccount(renameBtn.dataset.rename); return; }
   const deleteBtn = e.target.closest('[data-delete]');
-  if (deleteBtn) { deleteAccount(deleteBtn.dataset.delete); }
+  if (deleteBtn) { deleteAccount(deleteBtn.dataset.delete); return; }
+  const hideBtn = e.target.closest('[data-hide]');
+  if (hideBtn) { setBuiltinHidden(hideBtn.dataset.hide, hideBtn.dataset.to === '1'); }
 });
 
 // ============ ネタ出し（テーマ・指示の提案） ============
