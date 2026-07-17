@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Post Studio X 使い方ガイド</title>
+<style>
+  :root{
+    --blue:#1d9bf0; --blue-2:#1a8cd8; --blue-soft:#e8f5fe;
+    --ink:#0f1419; --sub:#536471; --line:#e6ecf0; --line-2:#cfd9de;
+    --bg:#ffffff; --soft:#f7f9f9; --code:#0f1419; --code-fg:#e7edf2; --code-dim:#8b98a5;
+    --green:#00875a; --green-soft:#e5f8f1; --amber:#b45309; --amber-soft:#fdf3e3;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  @page{ size:1280px 840px; margin:0; }
+  html,body{background:#333;}
+  @media print{
+    html,body{ background:#fff; }
+    .slide{ margin:0 !important; }
+    .slide + .slide{ margin-top:0 !important; }
+    .card,.code,.note,.tag{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic UI",sans-serif;
+    color:var(--ink); line-height:1.6;
+  }
+  .slide{
+    width:1280px; height:840px; background:var(--bg); position:relative;
+    padding:64px 76px; overflow:hidden; page-break-after:always;
+    margin:0 auto;
+  }
+  .slide + .slide{ margin-top:24px; }
+  .kicker{ color:var(--blue); font-weight:800; font-size:20px; letter-spacing:.06em; }
+  h1{ font-size:60px; font-weight:800; letter-spacing:-.01em; line-height:1.12; }
+  h2{ font-size:40px; font-weight:800; letter-spacing:-.01em; margin-bottom:6px; }
+  .lead{ color:var(--sub); font-size:23px; margin-top:14px; }
+  .pill{ display:inline-block; background:var(--blue); color:#fff; font-weight:800;
+    font-size:16px; padding:6px 16px; border-radius:999px; }
+  .pill.ghost{ background:var(--soft); color:var(--sub); }
+  .num{ display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px;
+    background:var(--blue); color:#fff; font-weight:800; border-radius:999px; font-size:19px; flex:none; }
+  .foot{ position:absolute; left:76px; right:76px; bottom:34px; display:flex; justify-content:space-between;
+    color:#9aa4b2; font-size:15px; border-top:1px solid var(--line); padding-top:12px; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:34px; }
+  .card{ border:1px solid var(--line-2); border-radius:18px; padding:24px 26px; background:var(--bg); }
+  .card h3{ font-size:24px; font-weight:800; margin-bottom:8px; }
+  .card p{ color:var(--sub); font-size:19px; }
+  .rows{ margin-top:30px; display:flex; flex-direction:column; gap:18px; }
+  .row{ display:flex; gap:18px; align-items:flex-start; }
+  .row .t{ font-size:22px; }
+  .row .t b{ font-weight:800; }
+  .row .t span{ color:var(--sub); }
+  code,.code{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .code{ background:var(--code); color:var(--code-fg); border-radius:16px; padding:24px 28px;
+    font-size:20px; line-height:1.85; margin-top:26px; white-space:pre; }
+  .code .c{ color:var(--code-dim); }
+  .code .k{ color:#7fd0ff; }
+  .tag{ display:inline-block; background:var(--soft); border:1px solid var(--line-2); color:var(--ink);
+    font-weight:700; font-size:17px; padding:5px 14px; border-radius:999px; margin:0 8px 10px 0; }
+  .note{ margin-top:24px; background:var(--blue-soft); border:1px solid #b9defb; color:#0b4a72;
+    border-radius:14px; padding:16px 20px; font-size:19px; }
+  .note.warn{ background:var(--amber-soft); border-color:#f0cf9c; color:#8a5a1f; }
+  .note.safe{ background:var(--green-soft); border-color:#a9e6d2; color:#00623f; }
+  .big-num{ position:absolute; right:60px; top:44px; font-size:150px; font-weight:800; color:var(--soft); }
+</style>
+</head>
+<body>
+
+<!-- 1. 表紙 -->
+<section class="slide">
+  <div style="height:100%; display:flex; flex-direction:column; justify-content:center;">
+    <div class="pill">X専用・AI下書きツール</div>
+    <h1 style="margin-top:28px;">Post Studio X<br>使い方ガイド</h1>
+    <p class="lead" style="max-width:820px;">
+      X（旧Twitter）の投稿を、アカウントごとの語り口で下書きするローカルツール。<br>
+      長文・短文・引用・リプ・会話リプ・X記事を、過去投稿を参考にしながら並べて生成できます。
+    </p>
+    <div style="margin-top:40px; display:flex; gap:10px;">
+      <span class="tag">ローカルで動く</span>
+      <span class="tag">サブスク認証優先＝追加課金なし</span>
+      <span class="tag">ポート 7879</span>
+    </div>
+  </div>
+  <div class="foot"><span>Post Studio X</span><span>1 / 11</span></div>
+</section>
+
+<!-- 2. これは何？ -->
+<section class="slide">
+  <div class="kicker">OVERVIEW</div>
+  <h2>これは何？ ／ できること</h2>
+  <p class="lead">あなたの代わりに「そのアカウントらしい」Xの投稿を下書きするツールです。</p>
+  <div class="grid2">
+    <div class="card"><h3>アカウントごとの語り口</h3><p>タロ／しーぷ／馬井など、キャラ設定に沿った文体で生成。新しいアカウントも自分で作れます。</p></div>
+    <div class="card"><h3>6つの投稿タイプ</h3><p>長文・短文・引用ポスト・リプライ・会話リプ・X記事。用途に合わせて選ぶだけ。</p></div>
+    <div class="card"><h3>過去投稿を参考（RAG）</h3><p>自分の過去ポストを参照して、語り口や数字のブレを抑えます。</p></div>
+    <div class="card"><h3>並べて一括生成</h3><p>ペインを複数開いて「まとめて生成」。バズ拾い・ネタ出し・履歴・カバー画像も。</p></div>
+  </div>
+  <div class="note"><b>X（旧Twitter）専用</b>に特化した下書きツール。余計な設定は省き、<b>Xの投稿づくりだけに集中</b>できます。</div>
+  <div class="foot"><span>Post Studio X</span><span>2 / 11</span></div>
+</section>
+
+<!-- 3. 必要なもの -->
+<section class="slide">
+  <div class="kicker">REQUIREMENTS</div>
+  <h2>用意するもの（自分でそろえる）</h2>
+  <p class="lead">DB の URL や API キーは <b>各自で取得して .env に入れます</b>（共有はしません）。</p>
+  <div class="rows">
+    <div class="row"><span class="num">1</span><div class="t"><b>Claude Code</b> <span>… 生成の認証に使用。<code>claude.com/claude-code</code> からインストールしてログイン。</span></div></div>
+    <div class="row"><span class="num">2</span><div class="t"><b>Python 3.12 以上</b> <span>… 3.9 では動きません。<code>brew install python@3.12</code></span></div></div>
+    <div class="row"><span class="num">3</span><div class="t"><b>Neon（無料のクラウドDB）の接続文字列</b> <span>… <code>neon.tech</code> で無料登録し Connection string をコピー。</span></div></div>
+    <div class="row"><span class="num">4</span><div class="t"><b>（任意）Anthropic / Gemini API キー</b> <span>… サブスク上限時の予備・カバー画像生成用。</span></div></div>
+  </div>
+  <div class="note safe">生成は <b>Claude Code のサブスク認証を優先</b>するので、通常は API 課金なし（¥0）で使えます。</div>
+  <div class="foot"><span>Post Studio X</span><span>3 / 11</span></div>
+</section>
+
+<!-- 4. セットアップ -->
+<section class="slide">
+  <div class="kicker">SETUP</div>
+  <h2>セットアップ</h2>
+  <p class="lead">GitHub からコードを取得して、5 手順で起動します。</p>
+  <div class="code" style="font-size:17px; line-height:1.7; padding:20px 26px; margin-top:18px;"><span class="c"># 1) コードを入手（Gitが無ければ GitHub の Code → Download ZIP でも可）</span>
+git clone https://github.com/arst8imp-boop/post-studio-x.git
+cd post-studio-x
+<span class="c"># 2) 仮想環境と依存</span>
+python3.12 -m venv .venv
+.venv/bin/pip install -r server/requirements.txt
+<span class="c"># 3) .env を作って自分の値を入れる（Neon の URL / 任意でAPIキー）</span>
+cp .env.example .env
+<span class="c"># 4) DB作成 → 5) 起動（http://localhost:7879 が開く）</span>
+.venv/bin/python3 setup_db.py
+./start.sh</div>
+  <div class="note" style="margin-top:16px;"><b>Claude Code に任せてもOK：</b>clone したフォルダを開いて「このツールをセットアップして起動して。Neon の URL と API キーは用意してある」と頼めば、2〜5 を代わりにやってくれます。</div>
+  <div class="foot"><span>Post Studio X</span><span>4 / 11</span></div>
+</section>
+
+<!-- 5. .env -->
+<section class="slide">
+  <div class="kicker">SETUP · .env</div>
+  <h2>.env の中身</h2>
+  <p class="lead"><code>post_studio_x/.env</code> に置きます（無ければ親フォルダの .env でも可）。</p>
+  <div class="code"><span class="k">DATABASE_URL</span>=postgres://...neon.tech/neondb?sslmode=require
+<span class="k">API_MONTHLY_BUDGET_JPY</span>=0          <span class="c"># 0 = API課金を既定でブロック（安全）</span>
+
+<span class="c"># ここから下は任意</span>
+<span class="k">ANTHROPIC_API_KEY</span>=sk-ant-...        <span class="c"># サブスク上限時の予備</span>
+<span class="k">GEMINI_API_KEY</span>=AIza...              <span class="c"># カバー画像を使うときだけ</span></div>
+  <div class="note warn"><b>DATABASE_URL は必須</b>（履歴・アカウント・使用量の保存先）。キー類は無くてもサブスク認証で動きます。</div>
+  <div class="foot"><span>Post Studio X</span><span>5 / 11</span></div>
+</section>
+
+<!-- 6. 画面の見方 -->
+<section class="slide">
+  <div class="kicker">SCREEN</div>
+  <h2>画面の見方</h2>
+  <p class="lead">画面は「ペイン」の集まり。ヘッダーの各ボタンから機能を開きます。</p>
+  <div class="grid2" style="grid-template-columns:1fr 1fr; margin-top:26px;">
+    <div class="card"><h3>ペイン（生成の単位）</h3><p>上で <b>アカウント</b> と <b>投稿タイプ</b> を選び、テーマ欄に指示を書いて <b>生成</b>。<br><b>Cmd+Enter</b> でも生成できます。</p></div>
+    <div class="card"><h3>ヘッダーのボタン</h3><p>ペイン追加／まとめて生成／バズ／ネタ出し／履歴／アカウント。右上に「本日のリプ」「今月のAPI課金」。</p></div>
+    <div class="card"><h3>RAG チェック</h3><p>オンにすると、そのアカウントの過去投稿を参考にして語り口を寄せます（精度重視）。</p></div>
+    <div class="card"><h3>コピー／カバー</h3><p>生成後に <b>コピー</b> でクリップボードへ。X記事タイプなら <b>カバー</b> 画像も作れます。</p></div>
+  </div>
+  <div class="foot"><span>Post Studio X</span><span>6 / 11</span></div>
+</section>
+
+<!-- 7. 生成の基本 -->
+<section class="slide">
+  <div class="kicker">GENERATE</div>
+  <h2>生成の基本</h2>
+  <p class="lead">6つの投稿タイプから選んで、テーマ欄に指示を入れるだけ。</p>
+  <div style="margin-top:26px;">
+    <span class="tag">長文ポスト</span><span class="tag">短文ポスト（140字）</span><span class="tag">引用ポスト</span>
+    <span class="tag">リプライ</span><span class="tag">会話リプ（流れ継続）</span><span class="tag">X記事（長文）</span>
+  </div>
+  <div class="rows" style="margin-top:26px;">
+    <div class="row"><span class="num">A</span><div class="t"><b>引用・リプ・会話リプ</b> <span>… テーマ欄に「相手の元ポスト」をそのまま貼り付ける。</span></div></div>
+    <div class="row"><span class="num">B</span><div class="t"><b>まとめて生成</b> <span>… 複数ペインにテーマを入れて一括生成。案出しに便利。</span></div></div>
+    <div class="row"><span class="num">C</span><div class="t"><b>追加指示欄</b> <span>… 「もっと短く」「数字を入れて」など細かい注文を任意で。</span></div></div>
+  </div>
+  <div class="note">生成物は自動で <b>履歴</b> に保存されます。あとから履歴 → クリックでペインに復元できます。</div>
+  <div class="foot"><span>Post Studio X</span><span>7 / 11</span></div>
+</section>
+
+<!-- 8. 便利機能 -->
+<section class="slide">
+  <div class="kicker">FEATURES</div>
+  <h2>便利機能</h2>
+  <div class="grid2" style="margin-top:30px;">
+    <div class="card"><h3>バズ</h3><p>伸びているポストを一覧。<b>引用RT用</b>／<b>リプ用</b>にワンクリックでペインへ流し込み。</p></div>
+    <div class="card"><h3>ネタ出し</h3><p>過去の生成履歴を踏まえ、まだ書いていない投稿ネタを提案。気に入ったら「ペインに流す」。</p></div>
+    <div class="card"><h3>履歴</h3><p>生成物の一覧・復元。ブランドで絞り込みも可能。</p></div>
+    <div class="card"><h3>カバー画像</h3><p>X記事タイプで本文から3行を抽出→カバー画像を自動生成（Gemini キーが必要）。</p></div>
+  </div>
+  <div class="foot"><span>Post Studio X</span><span>8 / 11</span></div>
+</section>
+
+<!-- 9. アカウント管理 -->
+<section class="slide">
+  <div class="kicker">ACCOUNTS</div>
+  <h2>アカウント管理</h2>
+  <p class="lead">ヘッダーの「アカウント」から、Xアカウント（ブランド）を管理します。</p>
+  <div class="rows">
+    <div class="row"><span class="num">1</span><div class="t"><b>新規作成</b> <span>… 表示名を入れて「作成」。ペインのプルダウンから選べるようになります。</span></div></div>
+    <div class="row"><span class="num">2</span><div class="t"><b>名前変更</b> <span>… 作成したアカウントの表示名を変更。</span></div></div>
+    <div class="row"><span class="num">3</span><div class="t"><b>削除</b> <span>… 確認のあと削除。<b>「履歴も一緒に消すか」</b>をその場で選べます。</span></div></div>
+  </div>
+  <div class="note warn">組み込みの3アカウント（<b>タロ／しーぷ／馬井</b>）は削除・名前変更できません。</div>
+  <div class="foot"><span>Post Studio X</span><span>9 / 11</span></div>
+</section>
+
+<!-- 10. コストと安全 -->
+<section class="slide">
+  <div class="kicker">COST &amp; SAFETY</div>
+  <h2>コストと安全（重要）</h2>
+  <p class="lead">「勝手に課金されない」よう、既定でAPI課金をブロックしています。</p>
+  <div class="rows">
+    <div class="row"><span class="num">1</span><div class="t"><b>サブスク認証を優先</b> <span>… 通常は Claude Code のプラン枠で生成＝追加課金なし（¥0）。</span></div></div>
+    <div class="row"><span class="num">2</span><div class="t"><b>予算0円でブロック</b> <span>… サブスク上限時も、<code>API_MONTHLY_BUDGET_JPY=0</code> の間は課金せず生成を停止。</span></div></div>
+    <div class="row"><span class="num">3</span><div class="t"><b>必要なときだけ解除</b> <span>… 右上「今月のAPI課金」→ <b>ブロック解除トグル</b>でAPI課金を手動許可（確認あり・既定はOFF）。</span></div></div>
+  </div>
+  <div class="note safe">使用量モーダルでは、今日／今月／累計のトークン数と課金額、予算バーが確認できます。</div>
+  <div class="foot"><span>Post Studio X</span><span>10 / 11</span></div>
+</section>
+
+<!-- 11. 困ったら -->
+<section class="slide">
+  <div class="kicker">TROUBLESHOOTING</div>
+  <h2>困ったら</h2>
+  <div class="rows" style="margin-top:30px;">
+    <div class="row"><span class="num">?</span><div class="t"><b>ポートが使用中</b> <span>… 別ポートで起動：<code>POST_STUDIO_PORT=7880 ./start.sh</code></span></div></div>
+    <div class="row"><span class="num">?</span><div class="t"><b>TypeError 等で起動しない</b> <span>… Python が 3.12 か確認。3.9 なら venv を作り直す。</span></div></div>
+    <div class="row"><span class="num">?</span><div class="t"><b>履歴・アカウントが保存されない</b> <span>… <code>.env</code> の <code>DATABASE_URL</code>（Neon）を確認。</span></div></div>
+    <div class="row"><span class="num">?</span><div class="t"><b>カバー画像で 429</b> <span>… Gemini 無料枠切れ。時間を置くか別モデルを指定。</span></div></div>
+  </div>
+  <div class="note">迷ったら、このガイドごと <b>Claude Code</b> に渡して「この通りにセットアップして」と頼めば大丈夫です。</div>
+  <div class="foot"><span>Post Studio X</span><span>11 / 11</span></div>
+</section>
+
+</body>
+</html>

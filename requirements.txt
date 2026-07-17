@@ -1,0 +1,19 @@
+# post_studio ランタイム依存（リポジトリルートに置く版）。
+# server/requirements.txt と同内容で同期。
+#
+# インストール:
+#   python3 -m venv .venv
+#   .venv/bin/pip install -r requirements.txt
+
+fastapi>=0.110
+uvicorn[standard]>=0.27
+anthropic>=0.40
+python-dotenv>=1.0
+pydantic>=2.0
+psycopg[binary]>=3.1
+pgvector>=0.2
+google-genai>=1.0
+Pillow>=10.0
+
+# スライド生成（任意・docs/make_arch_slides.py 用）
+python-pptx>=1.0

@@ -1,0 +1,27 @@
+# シークレット
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# 生成物（成果物はリポジトリに含めない）
+web/covers/*.png
+web/covers/*.jpg
+web/covers/*.jpeg
+
+# ローカル設定 / IDE
+.idea/
+.vscode/
+*.swp
+
+# pptx 出力（必要なら個別に git add）
+docs/*.pptx
