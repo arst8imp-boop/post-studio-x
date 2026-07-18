@@ -45,6 +45,90 @@ def embed_query(query: str) -> list[float] | None:
     return None
 
 
+def embed_document(text: str) -> list[float] | None:
+    """保存用の埋め込み（RETRIEVAL_DOCUMENT）。失敗時 None。"""
+    if not _gemini:
+        return None
+    for attempt in range(3):
+        try:
+            r = _gemini.models.embed_content(
+                model=EMBED_MODEL,
+                contents=text,
+                config=types.EmbedContentConfig(
+                    output_dimensionality=EMBED_DIM,
+                    task_type="RETRIEVAL_DOCUMENT",
+                ),
+            )
+            return r.embeddings[0].values
+        except Exception:
+            if attempt == 2:
+                return None
+            time.sleep(2 ** attempt)
+    return None
+
+
+def _own_source_type(brand: str) -> str:
+    return f"own_post_{brand}"
+
+
+def count_own_posts(brand: str) -> int:
+    """そのアカウントが学習済みの過去ポスト数。"""
+    if not DATABASE_URL:
+        return 0
+    try:
+        with psycopg.connect(DATABASE_URL, connect_timeout=4) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM my_content WHERE brand=%s AND source_type=%s",
+                    (brand, _own_source_type(brand)),
+                )
+                return int(cur.fetchone()[0])
+    except Exception as e:
+        print(f"[rag.count_own_posts] {type(e).__name__}: {e}")
+        return 0
+
+
+def ingest_own_posts(brand: str, posts: list[str]) -> dict:
+    """過去ポストを埋め込んで my_content に保存（そのアカウントのRAG参考になる）。"""
+    if not DATABASE_URL:
+        return {"error": "DATABASE_URL 未設定"}
+    if not GEMINI_API_KEY:
+        return {"error": "GEMINI_API_KEY 未設定（過去ポスト学習には埋め込み用のGeminiキーが必要）"}
+    cleaned = [p.strip() for p in posts if p and p.strip()]
+    if not cleaned:
+        return {"error": "取り込む本文が空です"}
+
+    stype = _own_source_type(brand)
+    sfile = f"own_{brand}"
+    added = 0
+    try:
+        with psycopg.connect(DATABASE_URL, connect_timeout=8) as conn:
+            register_vector(conn)
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COALESCE(MAX(chunk_index), -1) FROM my_content WHERE source_file=%s",
+                    (sfile,),
+                )
+                idx = int(cur.fetchone()[0])
+                for post in cleaned:
+                    vec = embed_document(post[:2000])
+                    if vec is None:
+                        continue
+                    idx += 1
+                    cur.execute("""
+                        INSERT INTO my_content (source_type, source_file, chunk_index, content, brand, embedding)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (source_file, chunk_index) DO NOTHING;
+                    """, (stype, sfile, idx, post, brand, vec))
+                    added += 1
+            conn.commit()
+        total = count_own_posts(brand)
+        return {"added": added, "total": total}
+    except Exception as e:
+        print(f"[rag.ingest_own_posts] {type(e).__name__}: {e}")
+        return {"error": f"{type(e).__name__}: {e}"}
+
+
 def search_similar(brand: str, theme: str, k: int = 4) -> list[dict]:
     """類似ポストを取得。失敗時は空配列を返す（生成は止めない）。"""
     if not (DATABASE_URL and GEMINI_API_KEY):
@@ -87,7 +171,15 @@ def search_similar(brand: str, theme: str, k: int = 4) -> list[dict]:
                         LIMIT %s;
                     """, (qv, qv, k))
                 else:
-                    return []
+                    # 新規作成アカウント：取り込んだ自分の過去ポストから類似検索
+                    cur.execute("""
+                        SELECT source_type, source_file, content, metadata,
+                               1 - (embedding <=> %s::vector) AS sim
+                        FROM my_content
+                        WHERE brand = %s AND source_type = %s
+                        ORDER BY embedding <=> %s::vector
+                        LIMIT %s;
+                    """, (qv, brand, f"own_post_{brand}", qv, k))
                 rows = cur.fetchall()
                 return [
                     {

@@ -13,6 +13,7 @@
 
 import asyncio
 import os
+import re
 import time
 from pathlib import Path
 from typing import AsyncGenerator, Optional
@@ -28,7 +29,7 @@ ROOT = Path(__file__).resolve().parent.parent
 WEB_DIR = ROOT / "web"
 
 from prompts import build_system_prompt, build_user_prompt  # noqa: E402
-from rag import build_rag_context  # noqa: E402
+from rag import build_rag_context, ingest_own_posts, count_own_posts  # noqa: E402
 import history  # noqa: E402
 import brand_settings  # noqa: E402
 import post_ideas  # noqa: E402
@@ -327,6 +328,62 @@ async def set_brand_hidden(brand: str, req: HiddenRequest) -> JSONResponse:
     return JSONResponse({"key": brand, "hidden": req.hidden})
 
 
+class VoiceRequest(BaseModel):
+    first_person: str = ""
+    tone: str = ""
+    theme_areas: str = ""
+    target_audience: str = ""
+    achievements: str = ""
+    ng_topics: str = ""
+    emoji_style: str = ""
+    extra_rules: str = ""
+
+
+@app.get("/brands/{brand}/voice")
+async def get_voice(brand: str) -> JSONResponse:
+    """アカウントの voice プロフィール＋学習済み過去ポスト数を返す。"""
+    await _resolve_brand(brand)
+    profile = await asyncio.to_thread(brand_settings.get, brand)
+    learned = await asyncio.to_thread(count_own_posts, brand)
+    return JSONResponse({"profile": profile, "learned_posts": learned})
+
+
+@app.post("/brands/{brand}/voice")
+async def save_voice(brand: str, req: VoiceRequest) -> JSONResponse:
+    await _resolve_brand(brand)
+    ok = await asyncio.to_thread(brand_settings.save, brand, req.model_dump())
+    if not ok:
+        raise HTTPException(500, "保存に失敗しました。DATABASE_URL を確認してください。")
+    return JSONResponse({"saved": True})
+
+
+def re_split_posts(text: str) -> list[str]:
+    """貼り付けテキストを空行（2連続改行）で1ポストずつに分割。"""
+    parts = re.split(r"\n\s*\n", text.strip())
+    return [p.strip() for p in parts if p.strip()]
+
+
+class IngestRequest(BaseModel):
+    posts: list[str] = []
+    text: str = ""
+
+
+@app.post("/brands/{brand}/ingest")
+async def ingest_posts(brand: str, req: IngestRequest) -> JSONResponse:
+    """過去ポストを学習（埋め込み→RAGに保存）。posts配列か、改行区切りのtextを受ける。"""
+    await _resolve_brand(brand)
+    posts = list(req.posts)
+    if req.text.strip():
+        # 空行で区切って1ポストずつに分割
+        posts += [p for p in re_split_posts(req.text)]
+    if not posts:
+        raise HTTPException(400, "取り込む過去ポストがありません")
+    result = await asyncio.to_thread(ingest_own_posts, brand, posts)
+    if "error" in result:
+        raise HTTPException(500, result["error"])
+    return JSONResponse(result)
+
+
 @app.delete("/brands/{brand}")
 async def delete_brand(brand: str, with_history: bool = False) -> JSONResponse:
     """新規作成したアカウントを削除。組み込み3ブランドは削除不可。
@@ -350,6 +407,17 @@ async def generate(req: GenerateRequest, request: Request) -> StreamingResponse:
         system_prompt = build_system_prompt(req.brand, req.type, display_name=display_name)
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+    # 新規作成アカウント（custom）は、画面で設定した voice プロフィールを注入
+    if display_name is not None:
+        try:
+            voice_block = await asyncio.wait_for(
+                asyncio.to_thread(brand_settings.build_voice_block, req.brand), timeout=6.0
+            )
+        except asyncio.TimeoutError:
+            voice_block = ""
+        if voice_block:
+            system_prompt = f"{system_prompt}\n\n{voice_block}"
 
     rag_used = 0
     if req.use_rag:

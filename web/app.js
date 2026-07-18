@@ -446,6 +446,8 @@ function closeAnyModal() {
   if (um && !um.hidden) um.hidden = true;
   const acc = document.getElementById('accounts-modal');
   if (acc && !acc.hidden) acc.hidden = true;
+  const ae = document.getElementById('account-edit-modal');
+  if (ae && !ae.hidden) ae.hidden = true;
   const im = document.getElementById('ideas-modal');
   if (im && !im.hidden) im.hidden = true;
 }
@@ -544,6 +546,7 @@ document.addEventListener('click', (e) => {
   if (target === 'buzz') closeBuzzModal();
   if (target === 'usage') usageModal.hidden = true;
   if (target === 'accounts') accountsModal.hidden = true;
+  if (target === 'accountedit') document.getElementById('account-edit-modal').hidden = true;
   if (target === 'ideas') ideasModal.hidden = true;
 }, true); // capture フェーズで先取り
 
@@ -773,6 +776,7 @@ function renderAccountList() {
     ? customs.map((b) => `
       <div style="display:flex; align-items:center; gap:8px">
         <span style="flex:1; font-weight:600">${esc(b.label)}</span>
+        <button type="button" class="primary" data-edit="${esc(b.key)}">作り込む</button>
         <button type="button" data-rename="${esc(b.key)}">名前変更</button>
         <button type="button" class="danger-btn" data-delete="${esc(b.key)}">削除</button>
       </div>`).join('')
@@ -893,9 +897,88 @@ document.getElementById('account-list').addEventListener('click', (e) => {
   if (renameBtn) { renameAccount(renameBtn.dataset.rename); return; }
   const deleteBtn = e.target.closest('[data-delete]');
   if (deleteBtn) { deleteAccount(deleteBtn.dataset.delete); return; }
+  const editBtn = e.target.closest('[data-edit]');
+  if (editBtn) { openAccountEdit(editBtn.dataset.edit); return; }
   const hideBtn = e.target.closest('[data-hide]');
   if (hideBtn) { setBuiltinHidden(hideBtn.dataset.hide, hideBtn.dataset.to === '1'); }
 });
+
+// ============ アカウント作り込み（voiceビルダー＋過去ポスト学習） ============
+const accountEditModal = document.getElementById('account-edit-modal');
+const VOICE_FIELDS = ['first_person', 'tone', 'theme_areas', 'target_audience',
+  'achievements', 'ng_topics', 'emoji_style', 'extra_rules'];
+let aeKey = null;
+
+async function openAccountEdit(key) {
+  aeKey = key;
+  document.getElementById('ae-title').textContent = brandLabel(key);
+  document.getElementById('ae-status').textContent = '';
+  document.getElementById('ae-ingest-status').textContent = '';
+  document.getElementById('ae-posts').value = '';
+  VOICE_FIELDS.forEach((f) => { const el = document.getElementById('ae-' + f); if (el) el.value = ''; });
+  document.getElementById('ae-learned').textContent = '';
+  accountEditModal.hidden = false;
+  try {
+    const res = await fetch(`/brands/${key}/voice`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = await res.json();
+    const p = d.profile || {};
+    VOICE_FIELDS.forEach((f) => { const el = document.getElementById('ae-' + f); if (el) el.value = p[f] || ''; });
+    document.getElementById('ae-learned').textContent =
+      d.learned_posts ? `　学習済み ${d.learned_posts}件` : '　まだ学習していません';
+  } catch (e) {
+    document.getElementById('ae-status').textContent = `読込エラー: ${e.message}`;
+  }
+}
+
+async function saveVoice() {
+  if (!aeKey) return;
+  const status = document.getElementById('ae-status');
+  status.textContent = '保存中…';
+  const body = {};
+  VOICE_FIELDS.forEach((f) => { body[f] = document.getElementById('ae-' + f).value; });
+  try {
+    const res = await fetch(`/brands/${aeKey}/voice`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    status.textContent = '声を保存しました（次の生成から反映）';
+    setTimeout(() => { status.textContent = ''; }, 4000);
+  } catch (e) {
+    status.textContent = `保存エラー: ${e.message}`;
+  }
+}
+
+async function ingestPosts() {
+  if (!aeKey) return;
+  const text = document.getElementById('ae-posts').value.trim();
+  const status = document.getElementById('ae-ingest-status');
+  if (!text) { status.textContent = '過去ポストを貼ってください（空行で区切る）'; return; }
+  status.innerHTML = '<span class="spinner"></span>学習中…';
+  const btn = document.getElementById('ae-ingest');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/brands/${aeKey}/ingest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) { const t = await res.text(); throw new Error(t.slice(0, 160) || `HTTP ${res.status}`); }
+    const d = await res.json();
+    status.textContent = `${d.added}件を学習しました（合計 ${d.total}件）`;
+    document.getElementById('ae-learned').textContent = `　学習済み ${d.total}件`;
+    document.getElementById('ae-posts').value = '';
+  } catch (e) {
+    status.textContent = `学習エラー: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('ae-save').addEventListener('click', saveVoice);
+document.getElementById('ae-ingest').addEventListener('click', ingestPosts);
 
 // ============ ネタ出し（テーマ・指示の提案） ============
 const ideasModal = document.getElementById('ideas-modal');

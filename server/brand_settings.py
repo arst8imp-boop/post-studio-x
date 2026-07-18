@@ -15,7 +15,23 @@ from _env import ENV_PATH  # noqa: F401
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
-FIELDS = ("theme_areas", "target_audience", "extra_rules")
+# voice プロフィールの項目（順序は build_voice_block の並びにも使う）
+FIELDS = (
+    "first_person", "tone", "theme_areas", "target_audience",
+    "achievements", "ng_topics", "emoji_style", "extra_rules",
+)
+
+# UI 表示・プロンプト注入用のラベル
+FIELD_LABELS = {
+    "first_person": "一人称",
+    "tone": "語尾・トーン",
+    "theme_areas": "発信テーマ",
+    "target_audience": "ターゲット読者",
+    "achievements": "使っていい実績・数字（これ以外の数字・実績は作らない）",
+    "ng_topics": "絶対に書かないこと",
+    "emoji_style": "絵文字の使い方",
+    "extra_rules": "追加ルール",
+}
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS brand_settings (
@@ -28,6 +44,12 @@ CREATE TABLE IF NOT EXISTS brand_settings (
 -- 動的ブランド（新規アカウント）用の後付けカラム
 ALTER TABLE brand_settings ADD COLUMN IF NOT EXISTS display_name TEXT DEFAULT '';
 ALTER TABLE brand_settings ADD COLUMN IF NOT EXISTS is_custom BOOLEAN DEFAULT FALSE;
+-- voice ビルダー用の後付けカラム
+ALTER TABLE brand_settings ADD COLUMN IF NOT EXISTS first_person TEXT DEFAULT '';
+ALTER TABLE brand_settings ADD COLUMN IF NOT EXISTS tone TEXT DEFAULT '';
+ALTER TABLE brand_settings ADD COLUMN IF NOT EXISTS achievements TEXT DEFAULT '';
+ALTER TABLE brand_settings ADD COLUMN IF NOT EXISTS ng_topics TEXT DEFAULT '';
+ALTER TABLE brand_settings ADD COLUMN IF NOT EXISTS emoji_style TEXT DEFAULT '';
 """
 
 
@@ -48,11 +70,11 @@ def get(brand: str) -> dict:
     if not DATABASE_URL:
         return empty
     try:
+        cols = ", ".join(FIELDS)
         with psycopg.connect(DATABASE_URL, connect_timeout=4) as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT theme_areas, target_audience, extra_rules "
-                    "FROM brand_settings WHERE brand=%s",
+                    f"SELECT {cols} FROM brand_settings WHERE brand=%s",
                     (brand,),
                 )
                 r = cur.fetchone()
@@ -64,21 +86,24 @@ def get(brand: str) -> dict:
         return empty
 
 
-def save(brand: str, theme_areas: str, target_audience: str, extra_rules: str) -> bool:
+def save(brand: str, values: dict) -> bool:
+    """voice プロフィールを保存。values は FIELDS のサブセット（未指定は空で更新）。"""
     if not DATABASE_URL:
         return False
+    vals = [(values.get(f) or "").strip() for f in FIELDS]
+    cols = ", ".join(FIELDS)
+    placeholders = ", ".join(["%s"] * len(FIELDS))
+    updates = ", ".join([f"{f} = EXCLUDED.{f}" for f in FIELDS])
     try:
         with psycopg.connect(DATABASE_URL, connect_timeout=4) as conn:
             with conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO brand_settings (brand, theme_areas, target_audience, extra_rules, updated_at)
-                    VALUES (%s, %s, %s, %s, NOW())
+                cur.execute(f"""
+                    INSERT INTO brand_settings (brand, {cols}, updated_at)
+                    VALUES (%s, {placeholders}, NOW())
                     ON CONFLICT (brand) DO UPDATE SET
-                      theme_areas = EXCLUDED.theme_areas,
-                      target_audience = EXCLUDED.target_audience,
-                      extra_rules = EXCLUDED.extra_rules,
+                      {updates},
                       updated_at = NOW();
-                """, (brand, theme_areas.strip(), target_audience.strip(), extra_rules.strip()))
+                """, (brand, *vals))
             conn.commit()
             return True
     except Exception as e:
@@ -185,6 +210,22 @@ def delete(brand: str) -> bool:
     except Exception as e:
         print(f"[brand_settings.delete] {type(e).__name__}: {e}")
         return False
+
+
+def build_voice_block(brand: str) -> str:
+    """voiceプロフィール（一人称・トーン・実績・NG等）をプロンプト末尾ブロックに整形。全空なら空文字。"""
+    s = get(brand)
+    lines: list[str] = []
+    for f in FIELDS:
+        v = (s.get(f) or "").strip()
+        if v:
+            lines.append(f"- {FIELD_LABELS[f]}: {v}")
+    if not lines:
+        return ""
+    return (
+        "【このアカウントの設定（画面から設定・キャラ既定より最優先で反映）】\n"
+        + "\n".join(lines)
+    )
 
 
 def build_prompt_block(brand: str) -> str:

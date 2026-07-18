@@ -146,6 +146,57 @@
   </div>
 </div>
 
+<!-- アカウント編集モーダル（voiceビルダー＋過去ポスト学習） -->
+<div id="account-edit-modal" class="modal" hidden>
+  <div class="modal-backdrop" data-modal-close="accountedit"></div>
+  <div class="modal-body">
+    <header class="modal-head">
+      <h2>アカウントを作り込む：<span id="ae-title"></span></h2>
+      <div class="modal-actions">
+        <button type="button" class="close" data-modal-close="accountedit" aria-label="閉じる">×</button>
+      </div>
+    </header>
+    <div style="padding:16px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; font-size:13.5px">
+      <div style="color:var(--muted,#888)">
+        このアカウント"らしさ"を決めます。<b>声（voice）</b>を設定し、<b>過去ポストを学習</b>させると、
+        あなたの口調・数字・型に寄せて生成します（設定はこのPCのDBだけに保存され、配布はされません）。
+      </div>
+
+      <b style="margin-top:4px">① 声（voice）の設定</b>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+        <label style="display:flex; flex-direction:column; gap:4px"><span style="font-size:12px; color:var(--muted,#888)">一人称</span>
+          <input id="ae-first_person" type="text" placeholder="例: わたし / 僕 / 俺"></label>
+        <label style="display:flex; flex-direction:column; gap:4px"><span style="font-size:12px; color:var(--muted,#888)">語尾・トーン</span>
+          <input id="ae-tone" type="text" placeholder="例: やわらかい敬語。断言は控えめ"></label>
+        <label style="display:flex; flex-direction:column; gap:4px"><span style="font-size:12px; color:var(--muted,#888)">発信テーマ</span>
+          <textarea id="ae-theme_areas" rows="2" placeholder="例: 個人カフェ経営、小さな商いの工夫"></textarea></label>
+        <label style="display:flex; flex-direction:column; gap:4px"><span style="font-size:12px; color:var(--muted,#888)">ターゲット読者</span>
+          <textarea id="ae-target_audience" rows="2" placeholder="例: これから小さな店を持ちたい人"></textarea></label>
+        <label style="display:flex; flex-direction:column; gap:4px"><span style="font-size:12px; color:var(--muted,#888)">使っていい実績・数字（これ以外は作らない）</span>
+          <textarea id="ae-achievements" rows="2" placeholder="例: 3坪の店で月商80万"></textarea></label>
+        <label style="display:flex; flex-direction:column; gap:4px"><span style="font-size:12px; color:var(--muted,#888)">絶対に書かないこと</span>
+          <textarea id="ae-ng_topics" rows="2" placeholder="例: 他店の悪口、政治、家族の話"></textarea></label>
+        <label style="display:flex; flex-direction:column; gap:4px"><span style="font-size:12px; color:var(--muted,#888)">絵文字の使い方</span>
+          <input id="ae-emoji_style" type="text" placeholder="例: 使わない / 文末に1つだけ"></label>
+        <label style="display:flex; flex-direction:column; gap:4px"><span style="font-size:12px; color:var(--muted,#888)">追加ルール（任意）</span>
+          <textarea id="ae-extra_rules" rows="2" placeholder="例: 専門用語には一言説明を添える"></textarea></label>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px">
+        <button type="button" id="ae-save" class="primary">声を保存</button>
+        <span id="ae-status" style="color:var(--muted,#888)"></span>
+      </div>
+
+      <b style="margin-top:8px">② 過去ポストを学習させる（RAG）<span id="ae-learned" style="color:var(--muted,#888); font-weight:400; font-size:12px"></span></b>
+      <div style="color:var(--muted,#888); font-size:12px">自分の過去ポストを貼って「取り込み」。<b>1ポストずつ空行で区切って</b>ください。多いほど"らしさ"が出ます（Geminiキーが必要）。</div>
+      <textarea id="ae-posts" rows="6" placeholder="過去のポストを貼る（空行で区切る）&#10;&#10;例）&#10;3坪の店だけど、狭さは武器になる。&#10;&#10;値上げが怖い人へ。100円上げて離れる客より…"></textarea>
+      <div style="display:flex; align-items:center; gap:12px">
+        <button type="button" id="ae-ingest" class="primary">この投稿を学習させる</button>
+        <span id="ae-ingest-status" style="color:var(--muted,#888)"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 使用量モーダル -->
 <div id="usage-modal" class="modal" hidden>
   <div class="modal-backdrop" data-modal-close="usage"></div>
