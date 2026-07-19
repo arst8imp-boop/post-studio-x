@@ -156,14 +156,14 @@
         <button type="button" class="close" data-modal-close="accountedit" aria-label="閉じる">×</button>
       </div>
     </header>
-    <div style="padding:16px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; font-size:13.5px">
+    <div style="padding:16px 20px; overflow-y:auto; flex:1; min-height:0; display:flex; flex-direction:column; gap:12px; font-size:13.5px">
       <div style="color:var(--muted,#888)">
         このアカウント"らしさ"を決めます。<b>声（voice）</b>を設定し、<b>過去ポストを学習</b>させると、
         あなたの口調・数字・型に寄せて生成します（設定はこのPCのDBだけに保存され、配布はされません）。
       </div>
 
       <b style="margin-top:4px">① 声（voice）の設定</b>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:start">
         <label style="display:flex; flex-direction:column; gap:4px"><span style="font-size:12px; color:var(--muted,#888)">一人称</span>
           <input id="ae-first_person" type="text" placeholder="例: わたし / 僕 / 俺"></label>
         <label style="display:flex; flex-direction:column; gap:4px"><span style="font-size:12px; color:var(--muted,#888)">語尾・トーン</span>
