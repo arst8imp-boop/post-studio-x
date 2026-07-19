@@ -889,8 +889,9 @@ async function setBuiltinHidden(key, hidden) {
 
 document.getElementById('open-accounts').addEventListener('click', openAccountsModal);
 document.getElementById('account-create').addEventListener('click', createAccount);
+// Enterでは作成しない（誤爆防止）。作成は「作成」ボタンからのみ。
 document.getElementById('account-new-name').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); createAccount(); }
+  if (e.key === 'Enter') e.preventDefault();
 });
 document.getElementById('account-list').addEventListener('click', (e) => {
   const renameBtn = e.target.closest('[data-rename]');
