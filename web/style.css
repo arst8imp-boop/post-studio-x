@@ -273,6 +273,11 @@ button.close:hover { color: var(--accent); background: var(--accent-soft); }
 }
 .budget-bar > div { height: 100%; transition: width .3s ease; }
 
+/* アカウント作り込みモーダル：中身はスクロール、子要素は縮ませない
+   （短いウィンドウで textarea が潰れてボタンに重なるのを防ぐ） */
+#account-edit-modal .modal-body > div > * { flex-shrink: 0; }
+#account-edit-modal textarea { flex-shrink: 0; }
+
 /* ============ 履歴 ============ */
 .history-list { overflow-y: auto; padding: 8px 4px; flex: 1; min-height: 0; }
 .history-item {
